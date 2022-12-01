@@ -2,10 +2,13 @@ import matplotlib.pyplot as plt
 import math
 import copy
 
+from itertools import combinations
+
 import numpy as np
 import pandas as pd
 
 from partition import *
+from sensors import sensor_current, irradiation
 
 colors = {
     3: 'cyan',
@@ -15,6 +18,19 @@ colors = {
     12: 'blue',
     14: 'green'
 }
+
+color_list = ['red', 'green', 'blue', 'yellow', 'cyan', 'orange', 'pink'] *10
+
+def get_sensors_r_min_max(modules):
+    r_min = 10000
+    r_max = 0
+    for module in modules:
+        for sensor in module.sensors:
+            for corner in sensor.activeArea:
+                r = math.sqrt(corner[0]**2 + corner[1]**2)
+                if r < r_min: r_min = r
+                if r > r_max: r_max = r
+    return r_min, r_max
 
 class three_vector:
     def __init__(self, x, y, z):
@@ -105,6 +121,12 @@ class Sensor(object):
         '''
         return plt.Polygon(self.outline if not active else self.activeArea, fill=fill, closed=True, edgecolor='black', facecolor=self.color if not active else color, alpha=alpha )
 
+    def get_current(self):
+        '''
+        use the center
+        '''
+        return sensor_current(irradiation(math.sqrt(self.x**2+self.y**2)))
+
 class ReadoutBoard(Sensor):
     def __init__(self, height, width, x=0, y=0, color='green'):
         '''
@@ -189,11 +211,11 @@ class Module(object):
 
         self.getActiveCorners()
 
-    def getPolygon(self):
+    def getPolygon(self, edgecolor='black', linewidth=2):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline, fill=None, closed=True, edgecolor='black', linewidth=2)
+        return plt.Polygon(self.outline, fill=None, closed=True, edgecolor=edgecolor, linewidth=linewidth)
 
     def populate(self, sensor):
         for ix in range(self.n_sensor_x):
@@ -230,6 +252,12 @@ class Module(object):
         self.vay1 = [ s.ay1 for s in self.sensors ]
         self.vay2 = [ s.ay2 for s in self.sensors ]
 
+    def get_current(self):
+        self.current = 0
+        for s in self.sensors:
+            self.current += s.get_current()
+        return self.current
+
 class SuperModule(object):
     def __init__(self, module, powerboard, readoutboard, x=0, y=0, n_modules=3, module_gap=0.5, orientation='above', color='b', cm=False):
         '''
@@ -261,6 +289,7 @@ class SuperModule(object):
         for im in range(n_modules):
             m_temp = copy.deepcopy(module)
             m_temp.move_by( ( -(n_modules-1)/2 + im )*(module.height+module_gap),  (-1)*self.PB.width/2 if orientation=='above' else self.PB.width/2 )
+            m_temp.i = im
             self.modules.append(m_temp)
 
         # update the dimensions of the RB and PB
@@ -334,6 +363,78 @@ class SuperModule(object):
         Move the whole thing so that the modules are centered around y
         '''
         self.move_by(-self.x1, -self.width/2+self.PB.width/2 if self.orientation=='above' else self.width/2-self.PB.width/2)
+
+    def find_BV_config(self, sensor_fun, verbose=False, min_split=1):
+        combs = list(combinations(self.modules, 2))
+        combs += [(self.modules[i], self.modules[i]) for i in range(self.n_modules)]
+        working_combs = []
+        problematic_modules = []
+        for comb in combs:
+            mi, ma = get_sensors_r_min_max(comb)
+            if mi>sensor_fun(ma):
+                working_combs.append((comb[0].i, comb[1].i))
+            elif mi<sensor_fun(ma) and comb[0] == comb[1]:
+                #if verbose:
+                problematic_modules.append(comb[0].i)
+                if verbose:
+                    print ("Need more than 1 BV per module, but will proceed anyway!")
+                working_combs.append((comb[0].i, comb[1].i))
+
+        if len(problematic_modules) > 0 and verbose:
+            print ("WARNING: Module found that needs more than 1 BV!")
+            #print (problematic_modules)
+
+        if verbose:
+            print (f"RB {self.n_modules} sitting at {self.x}, {self.y}")
+            print (f"I found {len(working_combs)} viable configurations.")
+        if len(working_combs) <2:
+            print ("!!! Warning !!!")
+
+        new_cfgs = [[c] for c in working_combs if c[1]==self.n_modules-1]
+
+        for it in range(self.n_modules):
+            cfgs = copy.deepcopy(new_cfgs)
+            new_cfgs = []
+            for l in cfgs:
+                for c in working_combs:
+                    if c[1] == l[-1][0]-1:
+                        new_cfgs.append(l + [c])
+                if l[-1][0] == 0:
+                    new_cfgs.append(l)
+
+        min_length = min([len(x) for x in new_cfgs])
+        min_length = max(min_split, min_length) if min_split > 1 else min_length
+        avg_bvs = self.n_modules/min_length
+
+
+        # picking the best config based on averaging the BV levels
+        best_cfg = []
+        best_avg = 10.
+        for cfg in cfgs:
+            if len(cfg) == min_length:
+                dist = 0
+                for pair in cfg:
+                    dist += abs(pair[1]+1 - pair[0] - avg_bvs)
+                dist = dist/min_length
+                if dist < best_avg:
+                    best_avg = dist
+                    best_cfg = cfg
+
+        if verbose:
+            print ("Best cfg:", best_cfg)
+
+        self.currents = []
+        for color_index, (mod_0, mod_1) in enumerate(best_cfg):
+            tmp = 0
+            for i in range(mod_0, mod_1+1):
+                self.modules[i].problematic=True if i in problematic_modules else False
+                tmp += self.modules[i].get_current()
+                for s in self.modules[i].sensors:
+                    s.color = color_list[color_index]
+            self.currents.append(tmp)
+        self.BV_cfg = best_cfg
+        self.BV_lines = len(best_cfg) + 1  # includes return
+        return best_cfg
 
 class Dee(object):
     def __init__(self, r_inner, r_outer, z=0, color='red'):
