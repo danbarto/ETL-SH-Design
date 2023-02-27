@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from partition import *
-from sensors import sensor_current, irradiation
+from sensors import sensor_current, irradiation, sensor_occupancy
 
 colors = {
     3: 'cyan',
@@ -19,7 +19,7 @@ colors = {
     14: 'green'
 }
 
-color_list = ['red', 'green', 'blue', 'yellow', 'cyan', 'orange', 'pink'] *10
+color_list = ['red', 'green', 'blue', 'yellow', 'cyan', 'orange', 'pink', 'gray', 'magenta', 'white', 'brown'] *10
 
 def get_sensors_r_min_max(modules):
     r_min = 10000
@@ -127,6 +127,15 @@ class Sensor(object):
         '''
         return sensor_current(irradiation(math.sqrt(self.x**2+self.y**2)))
 
+    def get_occupancy(self, per_etroc=False):
+        if per_etroc:
+            return [
+                sensor_occupancy(math.sqrt((self.x-self.height/2.)**2+self.y**2)),
+                sensor_occupancy(math.sqrt((self.x+self.height/2.)**2+self.y**2)),
+            ]
+        else:
+            return sensor_occupancy(math.sqrt(self.x**2 + self.y**2))
+
 class ReadoutBoard(Sensor):
     def __init__(self, height, width, x=0, y=0, color='green'):
         '''
@@ -188,7 +197,13 @@ class Module(object):
         self.sensor_distance_y = 0 if n_sensor_y == 1 else sensor_distance_y
         self.sensors = []
 
+        self.color = None
+
         self.setOutline()
+
+    def r(self):
+        self._r = math.sqrt(self.x**2 + self.y**2)
+        return self.r
 
     def setOutline(self):
         '''
@@ -211,11 +226,11 @@ class Module(object):
 
         self.getActiveCorners()
 
-    def getPolygon(self, edgecolor='black', linewidth=2):
+    def getPolygon(self, edgecolor='black', linewidth=2, fill=False):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline, fill=None, closed=True, edgecolor=edgecolor, linewidth=linewidth)
+        return plt.Polygon(self.outline, fill=fill, closed=True, edgecolor=edgecolor, linewidth=linewidth, facecolor=self.color)
 
     def populate(self, sensor):
         for ix in range(self.n_sensor_x):
@@ -257,6 +272,13 @@ class Module(object):
         for s in self.sensors:
             self.current += s.get_current()
         return self.current
+
+    def get_occupancy(self):
+        self.occupancy = 0
+        for s in self.sensors:
+            self.occupancy += s.get_occupancy()
+        self.occupancy = self.occupancy / len(self.sensors)
+        return self.occupancy
 
 class SuperModule(object):
     def __init__(self, module, powerboard, readoutboard, x=0, y=0, n_modules=3, module_gap=0.5, orientation='above', color='b', cm=False):
@@ -436,6 +458,17 @@ class SuperModule(object):
         self.BV_lines = len(best_cfg) + 1  # includes return
         return best_cfg
 
+    def get_occupancy(self, scale=1):
+        self.occupancy = 0
+        for m in self.modules:
+            self.occupancy += m.get_occupancy()
+        self.occupancy = scale*self.occupancy / len(self.modules)
+        return self.occupancy
+
+    def get_lpgbt_mult(self):
+        pass
+        #if self.occupancy >
+    
 class Dee(object):
     def __init__(self, r_inner, r_outer, z=0, color='red'):
         self.r_inner = r_inner
@@ -552,7 +585,11 @@ class Dee(object):
         self.vax2 = np.array(self.vax2)
         self.vay1 = np.array(self.vay1)
         self.vay2 = np.array(self.vay2)
-    
+
+    def attach_supermodules(self, supermodules):
+        self.supermodules = supermodules
+
+
     def getAllCorners(self):
         self.vax1 = []
         self.vax2 = []

@@ -48,3 +48,10 @@ def sensor_current(fluence, gain=20, alpha=3.70235e-19):
     '''
     volume = 256 * 0.13**2 * 0.005  # entire 16x16 sensor in cm**3
     return gain*fluence*1e14*volume*alpha*1e3
+
+def sensor_occupancy(r):
+    '''
+    r in [mm]
+    returns occupancy wrt to 1 at 320mm
+    '''
+    return 0.11 + 91297/r**2  # this is pretty conservative

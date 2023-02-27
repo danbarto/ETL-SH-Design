@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     for name in configs:
 
-        print (f"Working on {name}")
+        print (f"\n Working on {name}")
 
         fig, ax  = plt.subplots(1,1,figsize=(10,20) )
 
@@ -155,7 +155,8 @@ if __name__ == '__main__':
                 for sen in mod.sensors:
                     fig.gca().add_patch(sen.getPolygon())
 
-        print (BV_lines)
+        print (f"BV leads needed: {BV_lines}")
+        print (f"BV channels needed: {len(currents)}")
 
         ax.set_xlim(-10, 1300)
         ax.set_ylim(-1300, 1300)
@@ -178,9 +179,14 @@ if __name__ == '__main__':
     supermodules_outer = []
 
     for y in supermodules_dict.keys():
-        supermodules_inner += supermodules_dict[y][:-2]
-        supermodules_middle += supermodules_dict[y][-2:-1]
-        supermodules_outer += supermodules_dict[y][-1:]
+        if abs(y) < 600:
+            supermodules_inner += supermodules_dict[y][:-2]
+            supermodules_middle += supermodules_dict[y][-2:-1]
+            supermodules_outer += supermodules_dict[y][-1:]
+        else:
+            supermodules_inner += supermodules_dict[y][:-3]
+            supermodules_middle += supermodules_dict[y][-3:-1]
+            supermodules_outer += supermodules_dict[y][-1:]
 
     assert len(supermodules_inner+supermodules_middle+supermodules_outer) == len(supermodules), "Splitting into rings changed the number of supermodules"
 
@@ -201,6 +207,7 @@ if __name__ == '__main__':
     for SM in supermodules_inner + supermodules_middle:
         SM.find_BV_config(fbk_w13_5fc, verbose=False, min_split=2)
         fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['FBK'] += SM.n_modules
@@ -215,6 +222,7 @@ if __name__ == '__main__':
     for SM in supermodules_outer:
         SM.find_BV_config(hpk_split4_5fc, verbose=False, min_split=2)
         fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['HPK'] += SM.n_modules
@@ -234,6 +242,32 @@ if __name__ == '__main__':
     print (f"FBK: {n_modules['FBK']}, HPK: {n_modules['HPK']}")
 
     fig.savefig(f"./figures/realistic_5fC.pdf")
+
+    # just printing the "inner" service hybrids for debugging
+    inner = plt.Circle((0, 0), 315,fill=None, edgecolor='r')
+    rad_boarder = plt.Circle((0, 0), 520,fill=None, edgecolor='black', linewidth=2)
+    outer = plt.Circle((0, 0), 1185,fill=None, edgecolor='r')
+
+    fig, ax  = plt.subplots(1,1,figsize=(10,20) )
+
+    plt.gca().add_patch(inner)
+    plt.gca().add_patch(rad_boarder)
+    plt.gca().add_patch(outer)
+
+    for SM in supermodules_inner:
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
+        for mod in SM.modules:
+            fig.gca().add_patch(mod.getPolygon(linewidth=1))
+            for sen in mod.sensors:
+                fig.gca().add_patch(sen.getPolygon())
+
+    ax.set_xlim(-10, 1300)
+    ax.set_ylim(-1300, 1300)
+
+    fig.savefig(f"./figures/inner_ring.pdf")
+
+
 
     bins = "10,0,1"
     h_curr = Hist1D(currents, bins=bins)
@@ -266,6 +300,7 @@ if __name__ == '__main__':
     for SM in supermodules_inner:
         SM.find_BV_config(fbk_w13_10fc, verbose=False, min_split=3)
         fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['FBK'] += SM.n_modules
@@ -280,6 +315,7 @@ if __name__ == '__main__':
     for SM in supermodules_middle + supermodules_outer:
         SM.find_BV_config(hpk_split4_10fc, verbose=False, min_split=3)
         fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['HPK'] += SM.n_modules
@@ -333,6 +369,7 @@ if __name__ == '__main__':
     for SM in supermodules_inner:
         SM.find_BV_config(fbk_w13_10fc, verbose=False, min_split=1)
         fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['FBK'] += SM.n_modules
@@ -347,6 +384,7 @@ if __name__ == '__main__':
     for SM in supermodules_middle + supermodules_outer:
         SM.find_BV_config(hpk_split4_10fc, verbose=False, min_split=1)
         fig.gca().add_patch(SM.getPolygon(alpha=0.1))
+        fig.gca().add_patch(SM.getPolygon(fill=False))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['HPK'] += SM.n_modules
@@ -380,3 +418,96 @@ if __name__ == '__main__':
 
     fig.savefig(f"figures/currents_realistic_10fC_no_min_split.pdf")
     fig.clear()
+
+
+    # Other configurations
+    modules = []
+    for sm in supermodules:
+        modules += sm.modules
+
+    for m in modules:
+        m.r()
+
+    modules.sort(key=lambda x: x._r, reverse=False)
+    #modules.sort(key=lambda x: x.y, reverse=True)
+
+    # find all modules that have a sensor in r<520mm
+    fbk = []
+    hpk = []
+    for m in modules:
+        rmin, rmax = get_sensors_r_min_max([m])
+        if rmin<520:
+            fbk.append(m)
+        else:
+            hpk.append(m)
+
+
+    # sort from large r to small r
+    fbk.sort(key=lambda x: x._r, reverse=True)
+    hpk.sort(key=lambda x: x._r, reverse=True)
+
+    # now find all modules that can be grouped together, starting from largest r
+    # ignoring the currents for now because no one gives us any fucking information on power supplies, so keep on shooting in the dark. hurray!
+    groupings = []
+    first = True
+    for m in hpk:
+        rmin, rmax = get_sensors_r_min_max([m])
+        if first:
+            rmin_for_real = hpk_split4_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+            groupings.append([])
+            first = False
+        if rmin > rmin_for_real:
+            #print (rmin, rmin_for_real)
+            groupings[-1].append(m)
+        else:
+            rmin_for_real = hpk_split4_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+            groupings.append([m])
+
+    first = True
+    for m in fbk:
+        rmin, rmax = get_sensors_r_min_max([m])
+        if first:
+            rmin_for_real = fbk_w13_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+            groupings.append([])
+            first = False
+        if rmin > rmin_for_real:
+            #print (rmin, rmin_for_real)
+            groupings[-1].append(m)
+        else:
+            rmin_for_real = fbk_w13_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+            groupings.append([m])
+
+    # make a plot of the above groupings.
+    inner = plt.Circle((0, 0), 315,fill=None, edgecolor='r')
+    rad_boarder = plt.Circle((0, 0), 520,fill=None, edgecolor='black', linewidth=2)
+    outer = plt.Circle((0, 0), 1185,fill=None, edgecolor='r')
+    fig, ax  = plt.subplots(1,1,figsize=(10,20) )
+
+    plt.gca().add_patch(inner)
+    plt.gca().add_patch(rad_boarder)
+    plt.gca().add_patch(outer)
+
+    for i, group in enumerate(groupings):
+        # define a color per group
+        print (color_list[i])
+        for m in group:
+            print (m._r)
+            fig.gca().add_patch(m.getPolygon(edgecolor='black'))
+            for s in m.sensors:
+                fig.gca().add_patch(s.getPolygon(color=color_list[i], active=True))
+    ax.set_xlim(-10, 1300)
+    ax.set_ylim(-1300, 1300)
+
+    fig.savefig(f"./figures/sergey_10fC.pdf")
+    fig.clear()
+
+    # FIXME I don't know what I started below here.
+    current = 0
+    rmin_orig, rmax_orig = get_sensors_r_min_max([modules[0]])
+    pop = []
+    #for m in modules[1:]:
+    #    rmin, rmax = get_sensors_r_min_max([m])
+    #    if rmin > fbk_w13_10fc(rmax_orig) and current<20:
+    #        current += m.get_current()
+    #        pop.append(m)
+    #        modules.pop(modules.index(m))
