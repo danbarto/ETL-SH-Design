@@ -261,6 +261,11 @@ if __name__ == '__main__':
     fig.savefig('test8.pdf')
 
 
+    # latest bias voltage studies with Natalia's latest attachment design
+    # will assume a 10fC signal range
+    # assuming 20mA HV supply channels
+    # 0.75mA surface currents per sensor (conservative)
+    # leakage current is radiation dependent, and assumed here at the end of life
     run_bias = True
     if run_bias:
         modules = []
@@ -271,7 +276,6 @@ if __name__ == '__main__':
             m.r()
 
         modules.sort(key=lambda x: x._r, reverse=False)
-        #modules.sort(key=lambda x: x.y, reverse=True)
 
         # find all modules that have a sensor in r<520mm
         fbk = []
@@ -289,7 +293,6 @@ if __name__ == '__main__':
         hpk.sort(key=lambda x: x._r, reverse=True)
 
         # now find all modules that can be grouped together, starting from largest r
-        # ignoring the currents for now because no one gives us any fucking information on power supplies, so keep on shooting in the dark. hurray!
         groupings = []
         first = True
         current = 0
@@ -300,7 +303,7 @@ if __name__ == '__main__':
             if current > 20:
                 new_group = True
             if first:
-                rmin_for_real = hpk_split4_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+                rmin_for_real = hpk_split4_10fc(rmax)
                 groupings.append([])
                 first = False
             if rmin > rmin_for_real and not new_group:
@@ -309,7 +312,7 @@ if __name__ == '__main__':
             else:
                 new_group = False
                 current = m.get_current()
-                rmin_for_real = hpk_split4_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+                rmin_for_real = hpk_split4_10fc(rmax)
                 groupings.append([m])
 
         first = True
@@ -322,16 +325,15 @@ if __name__ == '__main__':
             else:
                 current += m.get_current()
             if first:
-                rmin_for_real = fbk_w13_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+                rmin_for_real = fbk_w13_10fc(rmax)
                 groupings.append([])
                 first = False
             if rmin > rmin_for_real and not new_group:
-                #print (rmin, rmin_for_real)
                 groupings[-1].append(m)
             else:
                 new_group = False
                 current = m.get_current()
-                rmin_for_real = fbk_w13_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
+                rmin_for_real = fbk_w13_10fc(rmax)
                 groupings.append([m])
 
         for group in groupings:
