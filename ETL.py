@@ -6,20 +6,39 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from shapely.geometry import Polygon, Point
 
 from partition import *
 from sensors import sensor_current, irradiation, sensor_occupancy
 
 colors = {
-    3: 'cyan',
-    6: 'magenta',
-    7: 'yellow',
+    3: 'red',
+    6: 'orange',
+    7: 'blue',
     11: 'orange',
     12: 'blue',
     14: 'green'
 }
 
 color_list = ['red', 'green', 'blue', 'yellow', 'cyan', 'orange', 'pink', 'gray', 'magenta', 'white', 'brown'] *10
+
+def split_list(input_list,separator):
+    # https://stackoverflow.com/questions/30538436/how-to-to-split-a-list-at-a-certain-value
+    outer = []
+    inner = []
+    for elem in input_list:
+        if elem == separator:
+            if inner:
+                outer.append(inner)
+            inner = []
+        else:
+            inner.append(elem)
+    if inner:
+        outer.append(inner)
+    return outer
+
+def rad(deg):
+    return deg * np.pi / 180
 
 def get_sensors_r_min_max(modules):
     r_min = 10000
@@ -115,17 +134,22 @@ class Sensor(object):
         self.setOutline()
         self.setActiveArea()
 
-    def getPolygon(self, fill=True, active=False, alpha=0.5, color='gray'):
+    def getPolygon(self, fill=True, active=False, alpha=0.5, color='gray', simple=False):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline if not active else self.activeArea, fill=fill, closed=True, edgecolor='black', facecolor=self.color if not active else color, alpha=alpha )
+        if not simple:
+            return Polygon(
+                self.outline if not active else self.activeArea
+            )
+        else:
+            return plt.Polygon(self.outline if not active else self.activeArea, fill=fill, closed=True, edgecolor='black', facecolor=self.color if not active else color, alpha=alpha )
 
-    def get_current(self):
+    def get_current(self, safety_factor=1, add_current=0.75):
         '''
         use the center
         '''
-        return sensor_current(irradiation(math.sqrt(self.x**2+self.y**2)))
+        return add_current + sensor_current(irradiation(math.sqrt(self.x**2+self.y**2))) * safety_factor
 
     def get_occupancy(self, per_etroc=False):
         if per_etroc:
@@ -226,11 +250,16 @@ class Module(object):
 
         self.getActiveCorners()
 
-    def getPolygon(self, edgecolor='black', linewidth=2, fill=False):
+    def getPolygon(self, edgecolor='black', linewidth=2, fill=False, simple=False):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline, fill=fill, closed=True, edgecolor=edgecolor, linewidth=linewidth, facecolor=self.color)
+        if not simple:
+            return Polygon(
+                self.outline
+            )
+        else:
+            return plt.Polygon(self.outline, fill=fill, closed=True, edgecolor=edgecolor, linewidth=linewidth, facecolor=self.color)
 
     def populate(self, sensor):
         for ix in range(self.n_sensor_x):
@@ -362,11 +391,16 @@ class SuperModule(object):
             s.move_by(x, y)
         
 
-    def getPolygon(self, alpha=0.5, fill=True):
+    def getPolygon(self, alpha=0.5, fill=True, simple=False):
         '''
         Returns a polygon that can be drawn with matplotlib
         '''
-        return plt.Polygon(self.outline, fill=fill, closed=True, linewidth=3, edgecolor='black', facecolor=self.color, alpha=alpha)
+        if not simple:
+            return Polygon(
+                self.outline
+            )
+        else:
+            return plt.Polygon(self.outline, fill=fill, closed=True, linewidth=3, edgecolor='black', facecolor=self.color, alpha=alpha)
 
     def getActiveArea(self):
         '''
@@ -478,6 +512,15 @@ class Dee(object):
         self.color   = color
         self.supermodules = []
 
+    def add_geometries(self, geometries):
+        '''
+        take shapely geometries
+        '''
+        self.geometries = geometries
+
+    def overlaps(self, module):
+        return np.any(np.array([module.getPolygon().overlaps(x) or module.getPolygon().within(x) for x in self.geometries]))
+
     def populate(self, supermodule, edge_x=6, shift_x=0, shift_y=0, flavors=[3,6,7], center_RB=False, center_PB=False):
         '''
         takes a supermodule, puts them wherever there's space.
@@ -489,6 +532,7 @@ class Dee(object):
             smallest.centerModule()
         if center_PB:
             smallest.centerPB()
+
         smallest.move_by(edge_x,0)
 
         self.n_rows    = int(2*self.r_outer/smallest.width)+2
@@ -503,6 +547,7 @@ class Dee(object):
             for column in range(self.n_columns):
                 tmp = copy.deepcopy(smallest) #SuperModule.fromSuperModule(smallest, x=smallest.x, y=smallest.y, n_modules=1, module_gap=smallest.module_gap, orientation=smallest.orientation)
                 tmp.move_by(column*(smallest.height+smallest.module_gap), (math.floor(self.n_rows/2)-row)*smallest.width )
+                #if not self.overlaps(tmp):
                 if (tmp.x1**2 + tmp.y1**2)>self.r_inner**2 and \
                    (tmp.x2**2 + tmp.y2**2)>self.r_inner**2 and \
                    (tmp.x1**2 + tmp.y2**2)>self.r_inner**2 and \
@@ -510,12 +555,14 @@ class Dee(object):
                    (tmp.x1**2 + tmp.y1**2)<self.r_outer**2 and \
                    (tmp.x2**2 + tmp.y2**2)<self.r_outer**2 and \
                    (tmp.x1**2 + tmp.y2**2)<self.r_outer**2 and \
-                   (tmp.x2**2 + tmp.y1**2)<self.r_outer**2:
+                   (tmp.x2**2 + tmp.y1**2)<self.r_outer**2 and \
+                   (not self.overlaps(tmp)):
 
                     ## NOW apply the shift, otherwise we mess up the "on-disk" requirement. This can cause weirdness in the plots.
                     tmp.move_by(shift_x, shift_y)
 
                     self.slots[self.n_rows-row-1].append(tmp)
+                    self.slots[self.n_rows-row-1][-1].covered=False  # set some default
 
                     self.slot_matrix[self.n_rows-row-1][column] = 1
                 else:
@@ -525,31 +572,55 @@ class Dee(object):
         self.module_matrix = []
         self.slots_flat = []
         for i, row in enumerate(self.slot_matrix):
-            # maximum length
-            length = sum(row)
 
-            # use the partition function to get the composition of RB flavors
-            partition = getPartition(length, flavors=flavors)
-            covered = sum(partition)
-
+            split_row = split_list(row, 0)
+            total_length = 0
             x_shift = 0
-            for k, n_mod in enumerate(partition):
-                tmp = copy.deepcopy(SuperModule.fromSuperModule(supermodule, n_modules=n_mod, module_gap=supermodule.module_gap, orientation=supermodule.orientation, color=colors[n_mod]))
-                tmp.move_by(self.slots[i][0].x1-tmp.x1 + x_shift, self.slots[i][0].y1-tmp.y1)
-                x_shift += tmp.height + tmp.module_gap
-                self.supermodules.append(tmp)
-                #break
-                #self.slots[i][0].x1
+            start = 0
+            for h, roww in enumerate(split_row):
+                # maximum length
+                length = sum(roww)
+                #print (roww)
 
-            for j in range(length):
-                self.slots[i][j].covered = True if j<covered else False
+                # use the partition function to get the composition of RB flavors
+                partition = getPartition(length, flavors=flavors)
+                #print (partition)
+                covered = sum(partition)
+                #print (f"covered {covered}")
 
-            self.slots_flat += self.slots[i] if length>0 else []
+                for k, n_mod in enumerate(partition):
+                    tmp = copy.deepcopy(
+                        SuperModule.fromSuperModule(
+                            supermodule,
+                            n_modules=n_mod,
+                            module_gap=supermodule.module_gap,
+                            orientation=supermodule.orientation,
+                            color=colors[n_mod],
+                        ),
+                    )
+                    new_center = sum([x.x for x in self.slots[i][start:start+n_mod]])/n_mod - tmp.x
+                    tmp.move_by(
+                        new_center + x_shift,
+                        #self.slots[i][0].x1-tmp.x1 + x_shift,  # correct for geometry
+                        self.slots[i][0].y1-tmp.y1,
+                    )
+                    start += n_mod
+                    #x_shift += tmp.height + tmp.module_gap  #
+                    self.supermodules.append(tmp)
+                    #break
+                    #self.slots[i][0].x1
 
-            if length == covered:
-                self.module_matrix.append(row)
-            else:
-                self.module_matrix.append( [1]*covered + [-1]*(length-covered) + [0]*(len(row)-length) )
+                    for j in range(length):
+                        self.slots[i][total_length+j].covered = True if j<covered else False
+
+                    self.slots_flat += self.slots[i] if length>0 else []
+
+                    if length == covered:
+                        self.module_matrix.append(row)
+                    else:
+                        self.module_matrix.append( [1]*covered + [-1]*(length-covered) + [0]*(len(row)-length) )
+                total_length += length
+                start = length
 
         self.getAllCorners()
 

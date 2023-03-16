@@ -144,16 +144,16 @@ if __name__ == '__main__':
 
         for i, SM in enumerate(supermodules):
             SM.find_BV_config(configs[name], verbose=False, min_split=1)
-            fig.gca().add_patch(SM.getPolygon(fill=False))
+            fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
             BV_lines += SM.BV_lines
             currents += SM.currents
             for mod in SM.modules:
                 if mod.problematic:
-                    fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                    fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
                 else:
-                    fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                    fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
                 for sen in mod.sensors:
-                    fig.gca().add_patch(sen.getPolygon())
+                    fig.gca().add_patch(sen.getPolygon(simple=True))
 
         print (f"BV leads needed: {BV_lines}")
         print (f"BV channels needed: {len(currents)}")
@@ -206,33 +206,33 @@ if __name__ == '__main__':
 
     for SM in supermodules_inner + supermodules_middle:
         SM.find_BV_config(fbk_w13_5fc, verbose=False, min_split=2)
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['FBK'] += SM.n_modules
         for mod in SM.modules:
             if mod.problematic:
-                fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
             else:
-                fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     for SM in supermodules_outer:
         SM.find_BV_config(hpk_split4_5fc, verbose=False, min_split=2)
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['HPK'] += SM.n_modules
         for mod in SM.modules:
             if mod.problematic:
-                fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
             else:
-                fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     ax.set_xlim(-10, 1300)
     ax.set_ylim(-1300, 1300)
@@ -255,12 +255,12 @@ if __name__ == '__main__':
     plt.gca().add_patch(outer)
 
     for SM in supermodules_inner:
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         for mod in SM.modules:
-            fig.gca().add_patch(mod.getPolygon(linewidth=1))
+            fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     ax.set_xlim(-10, 1300)
     ax.set_ylim(-1300, 1300)
@@ -299,33 +299,33 @@ if __name__ == '__main__':
 
     for SM in supermodules_inner:
         SM.find_BV_config(fbk_w13_10fc, verbose=False, min_split=3)
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['FBK'] += SM.n_modules
         for mod in SM.modules:
             if mod.problematic:
-                fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
             else:
-                fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     for SM in supermodules_middle + supermodules_outer:
         SM.find_BV_config(hpk_split4_10fc, verbose=False, min_split=3)
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['HPK'] += SM.n_modules
         for mod in SM.modules:
             if mod.problematic:
-                fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
             else:
-                fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     ax.set_xlim(-10, 1300)
     ax.set_ylim(-1300, 1300)
@@ -368,33 +368,33 @@ if __name__ == '__main__':
 
     for SM in supermodules_inner:
         SM.find_BV_config(fbk_w13_10fc, verbose=False, min_split=1)
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['FBK'] += SM.n_modules
         for mod in SM.modules:
             if mod.problematic:
-                fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
             else:
-                fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     for SM in supermodules_middle + supermodules_outer:
         SM.find_BV_config(hpk_split4_10fc, verbose=False, min_split=1)
-        fig.gca().add_patch(SM.getPolygon(alpha=0.1))
-        fig.gca().add_patch(SM.getPolygon(fill=False))
+        fig.gca().add_patch(SM.getPolygon(alpha=0.1, simple=True))
+        fig.gca().add_patch(SM.getPolygon(fill=False, simple=True))
         BV_lines += SM.BV_lines
         currents += SM.currents
         n_modules['HPK'] += SM.n_modules
         for mod in SM.modules:
             if mod.problematic:
-                fig.gca().add_patch(mod.getPolygon(edgecolor='red'))
+                fig.gca().add_patch(mod.getPolygon(edgecolor='red', simple=True))
             else:
-                fig.gca().add_patch(mod.getPolygon(linewidth=1))
+                fig.gca().add_patch(mod.getPolygon(linewidth=1, simple=True))
             for sen in mod.sensors:
-                fig.gca().add_patch(sen.getPolygon())
+                fig.gca().add_patch(sen.getPolygon(simple=True))
 
     ax.set_xlim(-10, 1300)
     ax.set_ylim(-1300, 1300)
@@ -450,32 +450,54 @@ if __name__ == '__main__':
     # ignoring the currents for now because no one gives us any fucking information on power supplies, so keep on shooting in the dark. hurray!
     groupings = []
     first = True
+    current = 0
+    new_group = False
     for m in hpk:
         rmin, rmax = get_sensors_r_min_max([m])
+        current += m.get_current()
+        if current > 20:
+            new_group = True
         if first:
             rmin_for_real = hpk_split4_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
             groupings.append([])
             first = False
-        if rmin > rmin_for_real:
+        if rmin > rmin_for_real and not new_group:
             #print (rmin, rmin_for_real)
             groupings[-1].append(m)
         else:
+            new_group = False
+            current = m.get_current()
             rmin_for_real = hpk_split4_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
             groupings.append([m])
 
     first = True
+    current = 0
+    new_group = False
     for m in fbk:
         rmin, rmax = get_sensors_r_min_max([m])
+        if current + m.get_current() > 20:
+            new_group = True
+        else:
+            current += m.get_current()
         if first:
             rmin_for_real = fbk_w13_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
             groupings.append([])
             first = False
-        if rmin > rmin_for_real:
+        if rmin > rmin_for_real and not new_group:
             #print (rmin, rmin_for_real)
             groupings[-1].append(m)
         else:
+            new_group = False
+            current = m.get_current()
             rmin_for_real = fbk_w13_10fc(rmax)  # being optimistic here with 15fC, because no one knows anything anyway
             groupings.append([m])
+
+    for group in groupings:
+        current = 0
+        for m in group:
+            current += m.get_current()
+        if current > 20:
+            print("Found too large current in one group")
 
     # make a plot of the above groupings.
     inner = plt.Circle((0, 0), 315,fill=None, edgecolor='r')
@@ -492,9 +514,9 @@ if __name__ == '__main__':
         print (color_list[i])
         for m in group:
             print (m._r)
-            fig.gca().add_patch(m.getPolygon(edgecolor='black'))
+            fig.gca().add_patch(m.getPolygon(edgecolor='black', simple=True))
             for s in m.sensors:
-                fig.gca().add_patch(s.getPolygon(color=color_list[i], active=True))
+                fig.gca().add_patch(s.getPolygon(color=color_list[i], active=True, simple=True))
     ax.set_xlim(-10, 1300)
     ax.set_ylim(-1300, 1300)
 

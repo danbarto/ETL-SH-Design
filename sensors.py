@@ -41,12 +41,12 @@ def irradiation(r):
     '''
     return  -9.053e+00 + 7.420e+03/r + 3.664e-03*r
 
-def sensor_current(fluence, gain=20, alpha=3.70235e-19):
+def sensor_current(fluence, gain=20, alpha=3.70235e-19, pixels=256):
     '''
     fluence in 1e14 equivalent fluence
     returns current in mA
     '''
-    volume = 256 * 0.13**2 * 0.005  # entire 16x16 sensor in cm**3
+    volume = pixels * 0.13**2 * 0.005  # entire 16x16 sensor in cm**3
     return gain*fluence*1e14*volume*alpha*1e3
 
 def sensor_occupancy(r):
