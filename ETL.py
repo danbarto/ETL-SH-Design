@@ -511,6 +511,7 @@ class Dee(object):
         self.z       = z
         self.color   = color
         self.supermodules = []
+        self.geometries = []
 
     def add_geometries(self, geometries):
         '''
@@ -568,6 +569,7 @@ class Dee(object):
                 else:
                     self.slot_matrix[self.n_rows-row-1][column] = 0
 
+        self.n_modules = sum([sum(x) for x in self.slot_matrix])
         # now let's go through the matrix again and see which slots we can actually populate
         self.module_matrix = []
         self.slots_flat = []
