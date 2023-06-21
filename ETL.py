@@ -566,8 +566,72 @@ class Dee(object):
                     self.slots[self.n_rows-row-1][-1].covered=False  # set some default
 
                     self.slot_matrix[self.n_rows-row-1][column] = 1
+                    self.slots[self.n_rows-row-1][-1].available = 'yes'
+                # FIXME this elif is new
+                elif (tmp.modules[0].x1**2 + tmp.modules[0].y1**2)>self.r_inner**2 and \
+                    (tmp.modules[0].x2**2 + tmp.modules[0].y2**2)>self.r_inner**2 and \
+                    (tmp.modules[0].x1**2 + tmp.modules[0].y2**2)>self.r_inner**2 and \
+                    (tmp.modules[0].x2**2 + tmp.modules[0].y1**2)>self.r_inner**2 and \
+                    (tmp.modules[0].x1**2 + tmp.modules[0].y1**2)<self.r_outer**2 and \
+                    (tmp.modules[0].x2**2 + tmp.modules[0].y2**2)<self.r_outer**2 and \
+                    (tmp.modules[0].x1**2 + tmp.modules[0].y2**2)<self.r_outer**2 and \
+                    (tmp.modules[0].x2**2 + tmp.modules[0].y1**2)<self.r_outer**2 and \
+                    (not self.overlaps(tmp.modules[0])):
+                    # this adds a slot also if only a module fits, not requiring space for a power board as well
+                    if len(self.slots[self.n_rows-row-1])==1:
+                        if self.slots[self.n_rows-row-1][0].available == 'maybe':
+                            # if the previous slot already was a maybe, turn it into no
+                            # and overwrite the slot
+                            self.slots[self.n_rows-row-1][0] = tmp
+                            #self.slots[self.n_rows-row-1].append(tmp)
+                            #self.slots[self.n_rows-row-1][0].covered=False  # set some default
+                            self.slots[self.n_rows-row-1][-1].covered=False  # set some default
+                            self.slot_matrix[self.n_rows-row-1][column-1] = 0
+                            self.slot_matrix[self.n_rows-row-1][column] = 1
+                            self.slots[self.n_rows-row-1][0].available = 'no'
+                            self.slots[self.n_rows-row-1][-1].available = 'maybe'
+                            #self.slots[self.n_rows-row-1][1].available = 'maybe'
+                            #self.slot_matrix[self.n_rows-row-1][column] = 0
+                        else:
+                            self.slots[self.n_rows-row-1].append(tmp)
+                            self.slots[self.n_rows-row-1][-1].covered=False  # set some default
+                            self.slot_matrix[self.n_rows-row-1][column] = 1
+                            self.slots[self.n_rows-row-1][-1].available = 'maybe'
+                    elif len(self.slots[self.n_rows-row-1])>1:
+
+
+                        self.slot_matrix[self.n_rows-row-1][column] = 0
+                        #### can only use the maybe for the first slot of a row
+                        #if self.slots[self.n_rows-row-1][-1].available == 'maybe':
+                        #    # if the previous slot already was a maybe don't add another maybe
+                        #    self.slot_matrix[self.n_rows-row-1][column] = 0
+                        #else:
+                        #    self.slots[self.n_rows-row-1].append(tmp)
+                        #    self.slots[self.n_rows-row-1][-1].covered=False  # set some default
+                        #    self.slot_matrix[self.n_rows-row-1][column] = 1
+                        #    self.slots[self.n_rows-row-1][-1].available = 'maybe'
+
+                    else:
+                        #self.slot_matrix[self.n_rows-row-1][column] = 0
+                        ### can only use the maybe for the first slot of a row
+                        self.slots[self.n_rows-row-1].append(tmp)
+                        self.slots[self.n_rows-row-1][-1].covered=False  # set some default
+                        self.slot_matrix[self.n_rows-row-1][column] = 1
+                        self.slots[self.n_rows-row-1][-1].available = 'maybe'
+
                 else:
                     self.slot_matrix[self.n_rows-row-1][column] = 0
+                    #self.slots[self.n_rows-row-1][-1].available = 'no'
+                    #
+        ## Now that we have all potential slots we need to remove those where two "maybes" are next to each other
+        #for row in range(self.n_rows):
+        #    for column in range(self.n_columns):
+        #        if column>1:
+        #            if self.slots[self.n_rows-row-1][column-1] == 'maybe' and self.
+        #for i, row in enumerate(self.slots):
+        #    for j, slot in enumerate(row):
+
+
 
         self.n_modules = sum([sum(x) for x in self.slot_matrix])
         # now let's go through the matrix again and see which slots we can actually populate
@@ -575,6 +639,8 @@ class Dee(object):
         self.slots_flat = []
         for i, row in enumerate(self.slot_matrix):
 
+            #print(i)
+            print(row, sum(row))
             split_row = split_list(row, 0)
             total_length = 0
             x_shift = 0
@@ -582,7 +648,7 @@ class Dee(object):
             for h, roww in enumerate(split_row):
                 # maximum length
                 length = sum(roww)
-                #print (roww)
+                #print (length, roww)
 
                 # use the partition function to get the composition of RB flavors
                 partition = getPartition(length, flavors=flavors)
