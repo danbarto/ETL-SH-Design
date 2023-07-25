@@ -502,6 +502,36 @@ class SuperModule(object):
     def get_lpgbt_mult(self):
         pass
         #if self.occupancy >
+
+    def split_PB(self, align='right'):
+        '''
+        split PB into 2 for medium and long supermodules.
+        only do this after tiling has been done, otherwise the coordinates will not properly be propagated
+        '''
+        module_width = self.modules[0].width  # 57.5
+        module_height = self.modules[0].height  # 44.1
+        PB_height = 3*module_height + 2*self.module_gap
+        shifter = (-1) if align == 'left' else 1
+        if self.n_modules == 6: shifter = 0
+        if self.n_modules > 5:
+            self.PBs = [
+                PowerBoard(
+                    PB_height,
+                    self.PB.width,  # unchanged
+                    self.PB.x + PB_height/2 + shifter*(module_height/2+self.module_gap),
+                    self.PB.y,  # unchanged
+                ),
+                PowerBoard(
+                    PB_height,
+                    self.PB.width,  # unchanged
+                    self.PB.x - PB_height/2 + shifter*(module_height/2+self.module_gap),
+                    self.PB.y,  # unchanged
+                ),
+            ]
+        else:
+            self.PBs = [self.PB]
+        #elif self.n_modules == 7:
+
     
 class Dee(object):
     def __init__(self, r_inner, r_outer, z=0, color='red'):
@@ -539,15 +569,19 @@ class Dee(object):
         self.n_rows    = int(2*self.r_outer/smallest.width)+2
         self.n_columns = int(self.r_outer/(smallest.height+smallest.module_gap))+2
 
-        #self.slot_matrix = np.zeros((self.n_rows,self.n_columns))
-        self.slot_matrix = [[ 0 for x in range(self.n_columns)] for y in range(self.n_rows)]
-
         self.slots = [ []  for y in range(self.n_rows)]
-        
+
         for row in range(self.n_rows):
+            maybe_in_row = 0
             for column in range(self.n_columns):
                 tmp = copy.deepcopy(smallest) #SuperModule.fromSuperModule(smallest, x=smallest.x, y=smallest.y, n_modules=1, module_gap=smallest.module_gap, orientation=smallest.orientation)
                 tmp.move_by(column*(smallest.height+smallest.module_gap), (math.floor(self.n_rows/2)-row)*smallest.width )
+
+                self.slots[row].append(tmp)
+                self.slots[row][-1].covered = False # set a default
+                self.slots[row][-1].available = "no" # set a default. should be yes, no, maybe
+
+
                 #if not self.overlaps(tmp):
                 if (tmp.x1**2 + tmp.y1**2)>self.r_inner**2 and \
                    (tmp.x2**2 + tmp.y2**2)>self.r_inner**2 and \
@@ -560,14 +594,10 @@ class Dee(object):
                    (not self.overlaps(tmp)):
 
                     ## NOW apply the shift, otherwise we mess up the "on-disk" requirement. This can cause weirdness in the plots.
-                    tmp.move_by(shift_x, shift_y)
+                    #tmp.move_by(shift_x, shift_y)  # FIXME do we ever use the shift?
 
-                    self.slots[self.n_rows-row-1].append(tmp)
-                    self.slots[self.n_rows-row-1][-1].covered=False  # set some default
+                    self.slots[row][-1].available='yes'
 
-                    self.slot_matrix[self.n_rows-row-1][column] = 1
-                    self.slots[self.n_rows-row-1][-1].available = 'yes'
-                # FIXME this elif is new
                 elif (tmp.modules[0].x1**2 + tmp.modules[0].y1**2)>self.r_inner**2 and \
                     (tmp.modules[0].x2**2 + tmp.modules[0].y2**2)>self.r_inner**2 and \
                     (tmp.modules[0].x1**2 + tmp.modules[0].y2**2)>self.r_inner**2 and \
@@ -578,84 +608,72 @@ class Dee(object):
                     (tmp.modules[0].x2**2 + tmp.modules[0].y1**2)<self.r_outer**2 and \
                     (not self.overlaps(tmp.modules[0])):
                     # this adds a slot also if only a module fits, not requiring space for a power board as well
-                    if len(self.slots[self.n_rows-row-1])==1:
-                        if self.slots[self.n_rows-row-1][0].available == 'maybe':
-                            # if the previous slot already was a maybe, turn it into no
-                            # and overwrite the slot
-                            self.slots[self.n_rows-row-1][0] = tmp
-                            #self.slots[self.n_rows-row-1].append(tmp)
-                            #self.slots[self.n_rows-row-1][0].covered=False  # set some default
-                            self.slots[self.n_rows-row-1][-1].covered=False  # set some default
-                            self.slot_matrix[self.n_rows-row-1][column-1] = 0
-                            self.slot_matrix[self.n_rows-row-1][column] = 1
-                            self.slots[self.n_rows-row-1][0].available = 'no'
-                            self.slots[self.n_rows-row-1][-1].available = 'maybe'
-                            #self.slots[self.n_rows-row-1][1].available = 'maybe'
-                            #self.slot_matrix[self.n_rows-row-1][column] = 0
+                    #if len(self.slots[self.n_rows-row-1])==1:
+
+                    if maybe_in_row < 1:
+                        if len(self.slots[row])>1:
+                            if self.slots[row][-2].available == 'yes':
+                                self.slots[row][-1].available='no'
+                            else:
+                                self.slots[row][-1].available='maybe'
+                                maybe_in_row += 1
                         else:
-                            self.slots[self.n_rows-row-1].append(tmp)
-                            self.slots[self.n_rows-row-1][-1].covered=False  # set some default
-                            self.slot_matrix[self.n_rows-row-1][column] = 1
-                            self.slots[self.n_rows-row-1][-1].available = 'maybe'
-                    elif len(self.slots[self.n_rows-row-1])>1:
-
-
-                        self.slot_matrix[self.n_rows-row-1][column] = 0
-                        #### can only use the maybe for the first slot of a row
-                        #if self.slots[self.n_rows-row-1][-1].available == 'maybe':
-                        #    # if the previous slot already was a maybe don't add another maybe
-                        #    self.slot_matrix[self.n_rows-row-1][column] = 0
-                        #else:
-                        #    self.slots[self.n_rows-row-1].append(tmp)
-                        #    self.slots[self.n_rows-row-1][-1].covered=False  # set some default
-                        #    self.slot_matrix[self.n_rows-row-1][column] = 1
-                        #    self.slots[self.n_rows-row-1][-1].available = 'maybe'
-
+                            self.slots[row][-1].available='maybe'
+                            maybe_in_row += 1
                     else:
-                        #self.slot_matrix[self.n_rows-row-1][column] = 0
-                        ### can only use the maybe for the first slot of a row
-                        self.slots[self.n_rows-row-1].append(tmp)
-                        self.slots[self.n_rows-row-1][-1].covered=False  # set some default
-                        self.slot_matrix[self.n_rows-row-1][column] = 1
-                        self.slots[self.n_rows-row-1][-1].available = 'maybe'
+                        if self.slots[row][-2].available == 'maybe':
+                            self.slots[row][-1].available='maybe'
+                            self.slots[row][-2].available='no'
 
                 else:
-                    self.slot_matrix[self.n_rows-row-1][column] = 0
-                    #self.slots[self.n_rows-row-1][-1].available = 'no'
-                    #
-        ## Now that we have all potential slots we need to remove those where two "maybes" are next to each other
-        #for row in range(self.n_rows):
-        #    for column in range(self.n_columns):
-        #        if column>1:
-        #            if self.slots[self.n_rows-row-1][column-1] == 'maybe' and self.
-        #for i, row in enumerate(self.slots):
-        #    for j, slot in enumerate(row):
+                    self.slots[row][-1].available='no'
 
-
-
-        self.n_modules = sum([sum(x) for x in self.slot_matrix])
-        # now let's go through the matrix again and see which slots we can actually populate
-        self.module_matrix = []
         self.slots_flat = []
-        for i, row in enumerate(self.slot_matrix):
+        for i, row in enumerate(self.slots):
+            split_row = []
+            first = True
+            for x in row:
+                if first and x.available in ['yes', 'maybe']:
+                    split_row.append([x])
+                    first = False
+                elif x.available in ['yes', 'maybe']:
+                    split_row[-1].append(x)
+                elif x.available in ['no']:
+                    first = True
+                else:
+                    pass
 
-            #print(i)
-            print(row, sum(row))
-            split_row = split_list(row, 0)
+            passed = True
+            for j, roww in enumerate(split_row):
+                partition = getPartition(len(roww), flavors=flavors)
+                if len(partition) > 0:
+                    if roww[0].available == 'maybe' and partition[0] != 7:
+                        passed = False
+
+            if passed == False:
+                split_row = []
+                first = True
+                for x in row:
+                    if first and x.available in ['yes']:
+                        split_row.append([x])
+                        first = False
+                    elif x.available in ['yes']:
+                        split_row[-1].append(x)
+                    elif x.available in ['no']:
+                        first = True
+                    else:
+                        pass
+                for j, roww in enumerate(split_row):
+                    partition = getPartition(len(roww), flavors=flavors)
+                print(partition)
+
             total_length = 0
             x_shift = 0
             start = 0
-            for h, roww in enumerate(split_row):
-                # maximum length
-                length = sum(roww)
-                #print (length, roww)
 
-                # use the partition function to get the composition of RB flavors
-                partition = getPartition(length, flavors=flavors)
-                #print (partition)
-                covered = sum(partition)
-                #print (f"covered {covered}")
-
+            for j, roww in enumerate(split_row):
+                length = sum([x.available in ['yes', 'maybe'] for x in roww])
+                partition = getPartition(len(roww), flavors=flavors)
                 for k, n_mod in enumerate(partition):
                     tmp = copy.deepcopy(
                         SuperModule.fromSuperModule(
@@ -666,31 +684,33 @@ class Dee(object):
                             color=colors[n_mod],
                         ),
                     )
-                    new_center = sum([x.x for x in self.slots[i][start:start+n_mod]])/n_mod - tmp.x
+                    new_center = sum([x.x for x in roww[start:start+n_mod]])/n_mod - tmp.x
                     tmp.move_by(
                         new_center + x_shift,
-                        #self.slots[i][0].x1-tmp.x1 + x_shift,  # correct for geometry
-                        self.slots[i][0].y1-tmp.y1,
+                        roww[0].y1-tmp.y1,
                     )
                     start += n_mod
-                    #x_shift += tmp.height + tmp.module_gap  #
                     self.supermodules.append(tmp)
-                    #break
-                    #self.slots[i][0].x1
 
-                    for j in range(length):
-                        self.slots[i][total_length+j].covered = True if j<covered else False
+                for k in range(sum(partition)):
+                    roww[k].covered = True
+                    self.slots_flat += [roww[k]]
 
-                    self.slots_flat += self.slots[i] if length>0 else []
-
-                    if length == covered:
-                        self.module_matrix.append(row)
-                    else:
-                        self.module_matrix.append( [1]*covered + [-1]*(length-covered) + [0]*(len(row)-length) )
                 total_length += length
                 start = length
 
+        self.module_matrix = []
+        for row in self.slots:
+            self.module_matrix.append([])
+            for mod in row:
+                self.module_matrix[-1].append(int(mod.covered==True))
+
+        self.n_modules = len(self.slots_flat)
+
         self.getAllCorners()
+
+        for sm in self.supermodules:
+            sm.split_PB()
 
         return
 

@@ -315,10 +315,13 @@ if __name__ == '__main__':
     # NOTE modules that should be used
     if module_size in ['S']:
         m = Module(43.10, 56.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
+        module_gap = 0.5
     elif module_size in ['M']:
-        m = Module(44.20, 57.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
+        m = Module(44.10, 57.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
+        module_gap = 0.5
     elif module_size in ['L']:
-        m = Module(45.00, 57.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
+        m = Module(44.10, 57.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
+        module_gap = 0.6
     else:
         print(f"Don't know what to do with a module of size {module_size}. Get in shape!")
         raise("NotImplementedError")
@@ -345,11 +348,12 @@ if __name__ == '__main__':
     ]
 
     dees = {}
+    counts = {3:0, 6:0, 7:0}
     total_modules = 0
     for i, cfg in enumerate(configs):
         print(f"- {cfg[3]}")
 
-        SM = SuperModule(m, pb, rb, n_modules=3, orientation=cfg[0])
+        SM = SuperModule(m, pb, rb, n_modules=3, orientation=cfg[0], module_gap=module_gap)
         if i==0:
             dees[cfg[3]] = Dee(
                 r_inner_first,  # 315, # old number is 315
@@ -373,10 +377,18 @@ if __name__ == '__main__':
         )
 
         total_modules += dees[cfg[3]].n_modules
+
+        for sm in dees[cfg[3]].supermodules:
+            counts[sm.n_modules] += 1
+
         print(f"Layer {cfg[3]} has {dees[cfg[3]].n_modules} modules")
         print(f"With a supermodule count: {len(dees[cfg[3]].supermodules)}")
     print(f"This configuration results in {total_modules} modules for 1/4th of ETL.")
     print(f"This configuration results in {total_modules*4} modules for ETL.")
+
+    print(f"Small RBs {counts[3]*4})")
+    print(f"Medium RBs {counts[6]*4})")
+    print(f"Large RBs {counts[7]*4})")
 
     print("Done. Plotting now.")
 
