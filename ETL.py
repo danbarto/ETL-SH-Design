@@ -296,10 +296,10 @@ class Module(object):
         self.vay1 = [ s.ay1 for s in self.sensors ]
         self.vay2 = [ s.ay2 for s in self.sensors ]
 
-    def get_current(self):
+    def get_current(self, add_current=0.75):
         self.current = 0
         for s in self.sensors:
-            self.current += s.get_current()
+            self.current += s.get_current(add_current=add_current)
         return self.current
 
     def get_occupancy(self):

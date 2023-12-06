@@ -468,6 +468,7 @@ if __name__ == '__main__':
     # leakage current is radiation dependent, and assumed here at the end of life
     run_bias = True
     if run_bias:
+        add_current = 0.75  # this is the dominating factor in the number of bias voltages
         modules = []
         for sm in dees['face1'].supermodules:
             modules += sm.modules
@@ -499,7 +500,7 @@ if __name__ == '__main__':
         new_group = False
         for m in hpk:
             rmin, rmax = get_sensors_r_min_max([m])
-            current += m.get_current()
+            current += m.get_current(add_current=add_current)
             if current > 20:
                 new_group = True
             if first:
@@ -511,7 +512,7 @@ if __name__ == '__main__':
                 groupings[-1].append(m)
             else:
                 new_group = False
-                current = m.get_current()
+                current = m.get_current(add_current=add_current)
                 rmin_for_real = hpk_split4_10fc(rmax)
                 groupings.append([m])
 
@@ -520,10 +521,10 @@ if __name__ == '__main__':
         new_group = False
         for m in fbk:
             rmin, rmax = get_sensors_r_min_max([m])
-            if current + m.get_current() > 20:
+            if current + m.get_current(add_current=add_current) > 20:
                 new_group = True
             else:
-                current += m.get_current()
+                current += m.get_current(add_current=add_current)
             if first:
                 rmin_for_real = fbk_w13_10fc(rmax)
                 groupings.append([])
@@ -532,16 +533,38 @@ if __name__ == '__main__':
                 groupings[-1].append(m)
             else:
                 new_group = False
-                current = m.get_current()
+                current = m.get_current(add_current=add_current)
                 rmin_for_real = fbk_w13_10fc(rmax)
                 groupings.append([m])
 
         for group in groupings:
             current = 0
             for m in group:
-                current += m.get_current()
+                current += m.get_current(add_current=add_current)
             if current > 20:
                 print("Found too large current in one group")
+
+        # now plot the groupings that we found
+        fig, ax  = plt.subplots(1,1,figsize=(10,20) )
+
+        plot_polygon(nose, ax=ax, add_points=False, color='red')
+        plot_polygon(inner, ax=ax, add_points=False)
+        plot_polygon(outer, ax=ax, add_points=False)
+        for at in attachments:
+            plot_polygon(at, ax=ax, add_points=False)
+        for i, group in enumerate(groupings):
+            for mod in group:
+                mod.color = color_list[i]
+                #plot_polygon(mod.getPolygon(simple=True), ax=ax, add_points=False, color='red')
+                fig.gca().add_patch(mod.getPolygon(fill=True, simple=True))
+
+        ax.set_xlim(-10, 1300)
+        ax.set_ylim(-1300, 1300)
+
+        print (f"Number of bias voltage groups: {len(groupings)}")
+
+        fig.savefig(f"./figures/new_bias_study.pdf")
+
 
 
     run_acceptance = not args.skip_acceptance
