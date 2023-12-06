@@ -314,12 +314,15 @@ if __name__ == '__main__':
 
     # NOTE modules that should be used
     if module_size in ['S']:
+        # small (TDR-like) module size
         m = Module(43.10, 56.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
         module_gap = 0.5
     elif module_size in ['M']:
+        # updated module size optimized for tamales
         m = Module(44.10, 57.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
         module_gap = 0.5
     elif module_size in ['L']:
+        # this is actually not larger anymore, but with a slightly larger gap between modules
         m = Module(44.10, 57.50, n_sensor_x=2, n_sensor_y=2, sensor_distance_y = 22.4, sensor_distance_x = 22.6)
         module_gap = 0.6
     else:
@@ -373,7 +376,7 @@ if __name__ == '__main__':
             SM,
             center_RB=cfg[1],
             center_PB=cfg[2],
-            edge_x = 6 if not args.seal else 25,
+            edge_x = 8 if not args.seal else 25,  # 8 is the new minimum
         )
 
         total_modules += dees[cfg[3]].n_modules
@@ -792,46 +795,49 @@ if __name__ == '__main__':
 
         fig, ax = plt.subplots(1,1,figsize=(10,10))
 
-        results['plain']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='black', label='No attachment', linewidth=3)
-        results['baseline']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='red', label='Initial attachment', linewidth=3)
-        results['updated_S']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='blue', label='Updated attachment', linewidth=3)
-        results['updated_M']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='orange', label='Updated attach + med modules', linewidth=3)
-        results['updated_L']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='green', label='Updated attach + large modules', linewidth=3)
-        results['updated_L_with_seal']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='magenta', label='Updated attach + LM + seal', linewidth=3)
+        # P2UG plot request:  no attachment, initial attachment, updated attachment + LM + seal
+        #
+
+        results['no_attachment_r336']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='black', label='No attachment', linewidth=3)
+        #results['realistic_baseline']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='red', label='Initial attachment', linewidth=3)
+        #results['realistic_update']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='blue', label='Updated attachment', linewidth=3)
+        #results['realistic_update_medium_module']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='orange', label='Updated attach + med modules', linewidth=3)
+        #results['realistic_update_large_module']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='magenta', label='Updated attach + large modules', linewidth=3)
+        results['realistic_update_large_module_with_seal']['hits'][{'phi':sum}].profile('n').plot1d(ax=ax, color='green', label='Updated attach + LM + seal', linewidth=3)
 
         ax.legend()
         ax.set_xlabel(r'|$\eta$|')
         ax.set_ylabel(r'<$N_{hits}$>')
 
-        fig.savefig("figures/comparison_nhits_eta.png")
+        fig.savefig("figures/comparison_nhits_eta_3.png")
 
         fig, ax = plt.subplots(1,1,figsize=(10,10))
 
         results['no_attachment_r336']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='black', label='No attachment', linewidth=3)
-        results['realistic_baseline']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='red', label='Initial attachment', linewidth=3)
-        results['realistic_update']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='blue', label='Updated attachment', linewidth=3)
-        results['realistic_update_medium_module']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='orange', label='Updated attach + med modules', linewidth=3)
-        results['realistic_update_large_module']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='green', label='Updated attach + large modules', linewidth=3)
-        results['realistic_update_large_module_with_seal']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='magenta', label='Updated attach + LM + seal', linewidth=3)
+        #results['realistic_baseline']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='red', label='Initial attachment', linewidth=3)
+        #results['realistic_update']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='blue', label='Updated attachment', linewidth=3)
+        #results['realistic_update_medium_module']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='orange', label='Updated attach + med modules', linewidth=3)
+        #results['realistic_update_large_module']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='magenta', label='Updated attach + large modules', linewidth=3)
+        results['realistic_update_large_module_with_seal']['hits'][{'eta':sum}].profile('n').plot1d(ax=ax, color='green', label='Updated attach + LM + seal', linewidth=3)
 
         ax.legend()
         ax.set_xlabel(r'$\phi$')
         ax.set_ylabel(r'<$N_{hits}$>')
 
-        fig.savefig("figures/comparison_nhits_phi.png")
+        fig.savefig("figures/comparison_nhits_phi_3.png")
 
 
         fig, ax = plt.subplots(1,1,figsize=(10,10))
 
         results['no_attachment_r336']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='black', label='No attachment', linewidth=3)
-        results['realistic_baseline']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='red', label='Initial attachment', linewidth=3)
-        results['realistic_update']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='blue', label='Updated attachment', linewidth=3)
-        results['realistic_update_medium_module']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='orange', label='Updated attach + med modules', linewidth=3)
-        results['realistic_update_large_module']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='green', label='Updated attach + large modules', linewidth=3)
-        results['realistic_update_large_module_with_seal']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='magenta', label='Updated attach + LM + seal', linewidth=3)
+        #results['realistic_baseline']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='red', label='Initial attachment', linewidth=3)
+        #results['realistic_update']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='blue', label='Updated attachment', linewidth=3)
+        #results['realistic_update_medium_module']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='orange', label='Updated attach + med modules', linewidth=3)
+        #results['realistic_update_large_module']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='magenta', label='Updated attach + large modules', linewidth=3)
+        results['realistic_update_large_module_with_seal']['time'][{'phi':sum}].profile('t').plot1d(ax=ax, color='green', label='Updated attach + LM + seal', linewidth=3)
 
         ax.legend()
         ax.set_xlabel(r'|$\eta$|')
         ax.set_ylabel(r'$\sigma_{t}$')
 
-        fig.savefig("figures/comparison_time_res_eta.png")
+        fig.savefig("figures/comparison_time_res_eta_3.png")
